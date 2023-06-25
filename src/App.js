@@ -12,16 +12,14 @@ function App() {
   const BigNumber = require("bignumber.js");
   const vaultAddress = "0xBA12222222228d8Ba445958a75a0704d566BF2C8";
 
-  const [poolId, setPoolId] = useState("");
-  const [joinKind, setjoinKind] = useState(1);
-  const [bptHeld, setbptHeld] = useState("");
-  const [percentageToSell, setPercentageToSell] = useState("");
+  const [poolId, setPoolId] = useState("0x3fcb7085b8f2f473f80bf6d879cae99ea4de934400000000000000000000056d");
+  const [joinKind, setjoinKind] = useState(0);
+  const [slippageSetting, setslippageSetting] = useState("0.01");
   const [walletAddress, setWalletAddress] = useState("");
   const [buttonText, setButtonText] = useState("Connect Wallet");
   const [network, setNetwork] = useState("");
   const rows = new Array(3).fill(null);
   const [tokenAddresses, setTokenAddresses] = useState(new Array(3).fill(""));
-  const [tokenWeights, setTokenWeights] = useState(new Array(3).fill(""));
   const [tokenAmounts, setTokenAmounts] = useState(new Array(3).fill(""));
   const [approvedTokens, setApprovedTokens] = useState(new Array(3).fill(false));
 
@@ -155,34 +153,26 @@ function App() {
     const signer = await provider.getSigner();
     const ethcontract = new ethers.Contract(vaultAddress, vaultABI, signer);
 
-    const assets = tokenAddresses.filter((address) => address !== "");
-    const amountsIn = tokenAmounts.filter((amount) => amount !== "");
+    const userData = "0x0000000000000000000000000000000000000000000000000000000000000000";
 
-    const linkedItems = assets.map((asset, index) => [asset, amountsIn[index]]);
-    linkedItems.sort((a, b) => {
-      if (a[0] < b[0]) return -1;
-      if (a[0] > b[0]) return 1;
-      return 0;
-    });
-
-    const sortedAssets = linkedItems.map((item) => item[0]);
-    const sortedAmountsIn = linkedItems.map((item) => {
-      const value = new BigNumber(item[1]).toFixed(0);
-      return value.toString();
-    });
-    console.log(sortedAmountsIn);
-    const minBPT = 100000000;
-
-    const userData = ethers.utils.defaultAbiCoder.encode(["uint256", "uint256[]", "uint256"], [joinKind, sortedAmountsIn, minBPT]);
-
-    const joinRequest = {
-      assets: sortedAssets,
-      maxAmountsIn: sortedAmountsIn,
-      userData,
-      fromInternalBalance: false,
+    const BatchSwapStep = {
+      poolId: poolId,
+      assetInIndex: "1",
+      assetOutIndex: "0",
+      amount: tokenAmounts[0],
+      userData: userData,
     };
 
-    await ethcontract.joinPool(poolId, walletAddress, walletAddress, joinRequest);
+    const funds = {
+      sender: walletAddress,
+      fromInternalBalance: false,
+      recipient: walletAddress,
+      toInternalBalance: false,
+    };
+
+    const deadline = "999999999999999999";
+
+    await ethcontract.batchSwap(joinKind, [BatchSwapStep], tokenAddresses, funds, ["-9900000000000000", "10100000000000000", "0"], deadline);
   }
 
   const handleApprovalClick = async (tokenAddress, vaultAddress, index) => {
@@ -207,16 +197,10 @@ function App() {
       onChange: setjoinKind,
     },
     {
-      label: "BPT Held\u00A0\u00A0\u00A0\u00A0\u00A0",
-      id: "bptHeld",
-      value: bptHeld,
-      onChange: setbptHeld,
-    },
-    {
-      label: "Percentage To Sell\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0",
-      id: "percentageToSell",
-      value: percentageToSell,
-      onChange: setPercentageToSell,
+      label: "Slippage\u00A0\u00A0\u00A0\u00A0\u00A0",
+      id: "slippageSetting",
+      value: slippageSetting,
+      onChange: setslippageSetting,
     },
     {
       label: "Pool ID\u00A0\u00A0\u00A0\u00A0",
@@ -276,14 +260,9 @@ function App() {
       >
         <Container maxWidth="lg">
           <Grid container spacing={1}>
-            <Grid item xs={3}>
+            <Grid item xs={5}>
               <Typography variant="h6" sx={{ color: "pink" }}>
                 Token Addresses
-              </Typography>
-            </Grid>
-            <Grid item xs={3}>
-              <Typography variant="h6" sx={{ color: "pink" }}>
-                Token Weights
               </Typography>
             </Grid>
             <Grid item xs={3} container alignItems="center" justifyContent="center">
@@ -291,14 +270,14 @@ function App() {
                 Token Approvals
               </Typography>
             </Grid>
-            <Grid item xs={3}>
+            <Grid item xs={4}>
               <Typography variant="h6" sx={{ color: "pink" }}>
                 Token Amounts
               </Typography>
             </Grid>
             {rows.map((_, rowIndex) => (
               <React.Fragment key={rowIndex}>
-                <Grid item xs={3}>
+                <Grid item xs={5}>
                   <TextField
                     label={`Token Address ${rowIndex + 1}\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0`}
                     value={tokenAddresses[rowIndex]}
@@ -317,36 +296,17 @@ function App() {
                     }}
                   />
                 </Grid>
-                <Grid item xs={3}>
-                  <TextField
-                    label={`Token Weight ${rowIndex + 1}\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0`}
-                    value={tokenWeights[rowIndex]}
-                    onChange={(event) => handleInputChange(event, rowIndex, setTokenWeights)}
-                    fullWidth
-                    InputProps={{
-                      sx: {
-                        color: "yellow",
-                        fontSize: "12px",
-                      },
-                    }}
-                    InputLabelProps={{
-                      sx: {
-                        color: "white",
-                      },
-                    }}
-                  />
-                </Grid>
                 <Grid item xs={3} container alignItems="center" justifyContent="center">
                   <Button
                     variant="contained"
                     color="primary"
-                    disabled={approvedTokens[rowIndex]}
+                    disabled={approvedTokens[rowIndex] || rowIndex >= tokenAddresses.length - 2}
                     onClick={() => handleApprovalClick(tokenAddresses[rowIndex], vaultAddress, rowIndex)}
                   >
                     {approvedTokens[rowIndex] ? "Token Approved" : `Approve Token ${rowIndex + 1}`}
                   </Button>
                 </Grid>
-                <Grid item xs={3}>
+                <Grid item xs={4}>
                   <TextField
                     label={`Token Amount ${rowIndex + 1}\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0`}
                     value={tokenAmounts[rowIndex]}
@@ -357,6 +317,7 @@ function App() {
                         color: "yellow",
                         fontSize: "12px",
                       },
+                      readOnly: rowIndex === 1 || rowIndex === 2,
                     }}
                     InputLabelProps={{
                       sx: {
