@@ -373,7 +373,7 @@ function App() {
           @ZeKraken
         </a>
         &nbsp;:&nbsp;
-        <a href="https://github.com/zekraken-bot/batchSwap" target="_blank" rel="noopener noreferrer">
+        <a href="https://github.com/zekraken-bot/batchSwaper" target="_blank" rel="noopener noreferrer">
           github link
         </a>
       </footer>
