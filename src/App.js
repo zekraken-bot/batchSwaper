@@ -7,12 +7,13 @@ import { isAddress } from "ethers/lib/utils";
 
 import { ERC20 } from "./abi/erc20";
 import { vaultABI } from "./abi/BalVault";
+import { ERC4626LinearPool } from "./abi/erc4626";
 
 function App() {
   const BigNumber = require("bignumber.js");
   const vaultAddress = "0xBA12222222228d8Ba445958a75a0704d566BF2C8";
 
-  const [poolId, setPoolId] = useState("0x3fcb7085b8f2f473f80bf6d879cae99ea4de934400000000000000000000056d");
+  const [poolId, setPoolId] = useState("");
   const [joinKind, setjoinKind] = useState(0);
   const [slippageSetting, setslippageSetting] = useState("0.01");
   const [walletAddress, setWalletAddress] = useState("");
@@ -131,6 +132,25 @@ function App() {
     setApprovedTokens(newApprovedTokens);
   }
 
+  async function checkLinearContract(contractAddress) {
+    try {
+      const provider = new ethers.providers.Web3Provider(window.ethereum);
+      await provider.send("eth_requestAccounts", []);
+      const signer = await provider.getSigner();
+      const ethcontract = new ethers.Contract(contractAddress, ERC4626LinearPool, signer);
+
+      const mainToken = await ethcontract.getMainToken();
+      const wrappedToken = await ethcontract.getWrappedToken();
+      const poolIds = await ethcontract.getPoolId();
+
+      setTokenAddresses(() => [contractAddress, mainToken.toString(), wrappedToken.toString()]);
+      setPoolId(poolIds);
+      checkApprovedTokens([contractAddress, mainToken.toString(), wrappedToken.toString()]);
+    } catch (error) {
+      console.error("Not a valid linear contract:", error);
+    }
+  }
+
   const handleTokenAddressChange = (event, index) => {
     const newTokenAddresses = [...tokenAddresses];
     newTokenAddresses[index] = event.target.value;
@@ -145,6 +165,8 @@ function App() {
     if (isAddress(event.target.value)) {
       checkApprovedTokens(newTokenAddresses);
     }
+
+    checkLinearContract(newTokenAddresses[0]);
   };
 
   async function batchSwap() {
@@ -159,7 +181,7 @@ function App() {
       poolId: poolId,
       assetInIndex: "1",
       assetOutIndex: "0",
-      amount: tokenAmounts[0],
+      amount: tokenAmounts[1],
       userData: userData,
     };
 
@@ -172,7 +194,10 @@ function App() {
 
     const deadline = "999999999999999999";
 
-    await ethcontract.batchSwap(joinKind, [BatchSwapStep], tokenAddresses, funds, ["-9900000000000000", "10100000000000000", "0"], deadline);
+    const limitIn = new BigNumber(tokenAmounts[1]).multipliedBy(-(1 - slippageSetting));
+    const limitOut = new BigNumber(tokenAmounts[1]).multipliedBy(1 + slippageSetting);
+
+    await ethcontract.batchSwap(joinKind, [BatchSwapStep], tokenAddresses, funds, [limitIn.toString(), limitOut.toString(), "0"], deadline);
   }
 
   const handleApprovalClick = async (tokenAddress, vaultAddress, index) => {
@@ -279,7 +304,15 @@ function App() {
               <React.Fragment key={rowIndex}>
                 <Grid item xs={5}>
                   <TextField
-                    label={`Token Address ${rowIndex + 1}\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0`}
+                    label={
+                      rowIndex === 0
+                        ? "ERC4626 Contract Address \u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0"
+                        : rowIndex === 1
+                        ? "Main Token \u00A0\u00A0\u00A0\u00A0\u00A0"
+                        : rowIndex === 2
+                        ? "Wrapped Token \u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0"
+                        : `Token Address ${rowIndex + 1}\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0`
+                    }
                     value={tokenAddresses[rowIndex]}
                     onChange={(event) => handleTokenAddressChange(event, rowIndex)}
                     fullWidth
@@ -300,7 +333,7 @@ function App() {
                   <Button
                     variant="contained"
                     color="primary"
-                    disabled={approvedTokens[rowIndex] || rowIndex >= tokenAddresses.length - 2}
+                    disabled={approvedTokens[rowIndex] || rowIndex === 0 || rowIndex === tokenAddresses.length - 1}
                     onClick={() => handleApprovalClick(tokenAddresses[rowIndex], vaultAddress, rowIndex)}
                   >
                     {approvedTokens[rowIndex] ? "Token Approved" : `Approve Token ${rowIndex + 1}`}
@@ -308,7 +341,7 @@ function App() {
                 </Grid>
                 <Grid item xs={4}>
                   <TextField
-                    label={`Token Amount ${rowIndex + 1}\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0`}
+                    label={rowIndex === 0 ? "" : rowIndex === 1 ? "Main Token Amount \u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0" : ""}
                     value={tokenAmounts[rowIndex]}
                     onChange={(event) => handleInputChange(event, rowIndex, setTokenAmounts)}
                     fullWidth
@@ -317,7 +350,7 @@ function App() {
                         color: "yellow",
                         fontSize: "12px",
                       },
-                      readOnly: rowIndex === 1 || rowIndex === 2,
+                      readOnly: rowIndex === 0 || rowIndex === 2,
                     }}
                     InputLabelProps={{
                       sx: {
