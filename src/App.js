@@ -216,13 +216,13 @@ function App() {
 
   const additionalTextFields = [
     {
-      label: "Join/Exit Kind\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0",
+      label: "Join Kind (default: 0)\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0",
       id: "joinKind",
       value: joinKind,
       onChange: setjoinKind,
     },
     {
-      label: "Slippage\u00A0\u00A0\u00A0\u00A0\u00A0",
+      label: "Slippage (default: 0.01)\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0",
       id: "slippageSetting",
       value: slippageSetting,
       onChange: setslippageSetting,
@@ -244,7 +244,7 @@ function App() {
           onChange={(e) => onChange(e.target.value)}
           InputLabelProps={{ sx: { color: "white" } }}
           InputProps={{
-            sx: { color: "yellow", width: "325px", fontSize: "12px" },
+            sx: { color: "yellow", width: id === "poolId" ? "500px" : "200px", fontSize: "12px" },
           }}
         />
       </Grid>
@@ -270,10 +270,8 @@ function App() {
         </Button>
       </div>
       <br />
-      <Grid container spacing={1} justifyContent="center">
-        <Grid item xs={3}>
-          {additionalTextFields}
-        </Grid>
+      <Grid container spacing={1} direction="column" alignItems="center" justifyContent="center">
+        {additionalTextFields}
       </Grid>
       <br />
       <Box
@@ -286,17 +284,17 @@ function App() {
         <Container maxWidth="lg">
           <Grid container spacing={1}>
             <Grid item xs={5}>
-              <Typography variant="h6" sx={{ color: "pink" }}>
+              <Typography variant="h6" sx={{ color: "pink", mb: 1 }}>
                 Token Addresses
               </Typography>
             </Grid>
             <Grid item xs={3} container alignItems="center" justifyContent="center">
-              <Typography variant="h6" sx={{ color: "pink" }}>
+              <Typography variant="h6" sx={{ color: "pink", mb: 1 }}>
                 Token Approvals
               </Typography>
             </Grid>
             <Grid item xs={4}>
-              <Typography variant="h6" sx={{ color: "pink" }}>
+              <Typography variant="h6" sx={{ color: "pink", mb: 1 }}>
                 Token Amounts
               </Typography>
             </Grid>
