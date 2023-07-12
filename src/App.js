@@ -93,6 +93,8 @@ function App() {
         return "Arbitrum";
       case "1101":
         return "zkEVM";
+      case "43114":
+        return "Avalanche";
       default:
         return "Unknown network";
     }
