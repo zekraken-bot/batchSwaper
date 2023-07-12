@@ -266,8 +266,10 @@ function App() {
         <p align="right">Network: {network}</p>
       </header>
       <br />
-      <span style={{ color: "#c0c0c0", display: "flex", alignItems: "center", justifyContent: "center" }}>
-        Tip: Token Amount values should have the correct number of digits, 10000000000000000000 for 10 ETH, 10000000 for 10 USDC
+      <span style={{ color: "#c0c0c0", display: "block", paddingLeft: "50px" }}>
+        Usage:
+        <li>Paste the linear pool contract address in the text box below and the Pool ID, Main Token, and Wrapped Token fields should fill automatically</li>
+        <li>Token Amount values should be in e18 format, i.e. 10000000000000000000 for 10 ETH, 10000000 for 10 USDC</li>
       </span>
       <br />
       <br />
